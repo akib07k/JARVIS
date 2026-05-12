@@ -1,0 +1,25 @@
+{
+  "name": "agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "openai.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.4.2",
+    "edge-tts": "^1.0.1",
+    "googleapis": "^171.4.0",
+    "groq-sdk": "^1.2.0",
+    "node-record-lpcm16": "^1.0.1",
+    "openai": "^6.37.0",
+    "play-sound": "^1.1.6",
+    "readline-sync": "^1.4.10",
+    "say": "^0.16.0"
+  }
+}
