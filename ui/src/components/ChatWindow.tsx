@@ -1,120 +1,141 @@
 import { useState, useRef, useEffect } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { MessageBubble } from './MessageBubble';
 import { InputBox } from './InputBox';
-import Groq from 'groq-sdk';
+import { WaveformVisualizer } from './WaveformVisualizer';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
-
-const SYSTEM_PROMPT = `
-You are a helpful, intelligent, and professional AI coding assistant.
-Provide concise, accurate, and direct answers to questions.
-Format code snippets clearly.
-Do not use sci-fi personas, keep it purely professional.
-`;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 export const ChatWindow = () => {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'ai', text: 'Hello. I am your AI Assistant. How can I help you today?' }
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Initialize Socket.io
+  useEffect(() => {
+    socketRef.current = io(SOCKET_URL);
+
+    socketRef.current.on('connect', () => setIsConnected(true));
+    socketRef.current.on('disconnect', () => setIsConnected(false));
+
+    // Handle JARVIS response
+    socketRef.current.on('jarvis_response', (data) => {
+      setMessages(prev => [...prev, { 
+        id: Date.now(), 
+        sender: 'ai', 
+        text: data.text 
+      }]);
+    });
+
+    // Handle thinking state
+    socketRef.current.on('jarvis_thinking', (status) => {
+      setIsThinking(status);
+    });
+
+    // Load history via REST API
+    fetch(`${SOCKET_URL}/api/history`)
+      .then(res => res.json())
+      .then(data => {
+        const history = data.map((m: any, i: number) => ({
+          id: i,
+          sender: m.role === 'user' ? 'user' : 'ai',
+          text: m.content
+        }));
+        setMessages(history);
+      });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isThinking]);
 
-  const handleSendMessage = async (text: string) => {
-    const newUserMsg = { id: Date.now(), sender: 'user', text };
-    setMessages(prev => [...prev, newUserMsg]);
-    setIsThinking(true);
+  const handleSendMessage = (text: string) => {
+    if (!socketRef.current) return;
 
-    try {
-      const apiMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...messages.map(m => ({ 
-          role: m.sender === 'user' ? 'user' : 'assistant', 
-          content: m.text 
-        })),
-        { role: 'user', content: text }
-      ];
+    // Add user message locally
+    setMessages(prev => [...prev, { id: Date.now(), sender: 'user', text }]);
 
-      const response = await groq.chat.completions.create({
-        // @ts-ignore
-        messages: apiMessages,
-        model: 'llama-3.1-8b-instant',
-        temperature: 0.2,
-      });
-
-      const reply = response.choices[0].message.content || 'System error: No response generated.';
-      
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        sender: 'ai', 
-        text: reply 
-      }]);
-    } catch (error: any) {
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        sender: 'ai', 
-        text: `Error connecting to API: ${error.message}` 
-      }]);
-    } finally {
-      setIsThinking(false);
-    }
+    // Emit to backend
+    socketRef.current.emit('user_message', { message: text });
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#2b2b36]">
-      {/* Header */}
-      <header className="h-14 flex items-center px-6 border-b border-[#3a3a46] bg-[#2b2b36]">
-        <h2 className="text-gray-200 font-semibold text-sm">Default Model (Llama-3.1-8b)</h2>
+    <div className="flex-1 flex flex-col h-full bg-[#1e1e24] relative">
+      {/* Glassmorphism Header */}
+      <header className="h-16 flex items-center px-8 border-b border-white/[0.05] bg-black/20 backdrop-blur-md z-20 justify-between">
+        <div className="flex items-center gap-3">
+           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]' : 'bg-red-500 animate-pulse'}`}></div>
+           <h2 className="text-gray-100 font-medium tracking-tight text-sm uppercase">JARVIS System v2.0</h2>
+        </div>
+        <div className="flex items-center gap-4 text-[10px] text-gray-500 font-mono">
+           <span>STT: ACTIVE</span>
+           <span>LATENCY: 12ms</span>
+        </div>
       </header>
 
       {/* Chat Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pb-6">
-        {messages.length === 1 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 mt-20 mb-10">
-             <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-6 shadow-md">
-                <span className="text-2xl font-bold text-white">AI</span>
-             </div>
-             <h1 className="text-2xl font-bold text-gray-100 mb-2">How can I help you today?</h1>
-             <p className="text-gray-400">Ask a question, request code, or discuss an idea.</p>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-6 space-y-4">
+        {messages.length === 0 && !isThinking && (
+          <div className="flex-1 flex flex-col items-center justify-center">
+             <WaveformVisualizer isThinking={false} />
+             <motion.div 
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="mt-8 text-center"
+             >
+                <h1 className="text-3xl font-light text-white mb-2">Systems Online, Sir.</h1>
+                <p className="text-gray-500 text-sm">Waiting for voice or text command...</p>
+             </motion.div>
           </div>
         )}
 
-        <div className="flex flex-col w-full">
-          {messages.map((msg) => (
-             // Don't show the initial greeting in the normal chat stream if we have the big center greeting
-            (msg.id === 1 && messages.length === 1) ? null :
-            <MessageBubble key={msg.id} sender={msg.sender as 'user' | 'ai'} text={msg.text} />
-          ))}
+        <div className="flex flex-col w-full max-w-4xl mx-auto space-y-6">
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, x: msg.sender === 'user' ? 20 : -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MessageBubble sender={msg.sender} text={msg.text} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
           
           {isThinking && (
-             <div className="w-full py-6 bg-[#31313e]">
-               <div className="max-w-3xl mx-auto flex gap-6 px-4">
-                 <div className="w-8 h-8 rounded-sm bg-blue-600 flex items-center justify-center shrink-0">
-                   <span className="text-sm font-semibold text-white">AI</span>
-                 </div>
-                 <div className="flex items-center gap-1 mt-2">
-                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                 </div>
+             <div className="flex justify-start">
+               <div className="flex gap-2 p-3 bg-white/[0.03] rounded-2xl border border-white/[0.05]">
+                 <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                 <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                 <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                </div>
              </div>
           )}
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-[#2b2b36]">
-        <InputBox onSend={handleSendMessage} disabled={isThinking} />
-      </div>
+      {/* Input Area (Glassmorphism) */}
+      <footer className="p-6 bg-black/10 backdrop-blur-xl border-t border-white/[0.05]">
+        <div className="max-w-4xl mx-auto flex flex-col items-center">
+          {isThinking && (
+            <div className="mb-4">
+              <WaveformVisualizer isThinking={true} />
+            </div>
+          )}
+          <InputBox onSend={handleSendMessage} disabled={isThinking} />
+        </div>
+      </footer>
     </div>
   );
 };

@@ -1,226 +1,84 @@
-// import dotenv from "dotenv";
-// import Groq from "groq-sdk";
-// import readlineSync from "readline-sync";
-// import say from "say";
-
-// dotenv.config();
-
-// // Groq setup
-// const groq = new Groq({
-//   apiKey: process.env.GROQ_API_KEY,
-//   timeout: 60000,
-// });
-
-// // Memory
-// const messages = [
-//   {
-//     role: "system",
-//     content: `
-// You are Jarvis, a futuristic AI assistant inspired by Iron Man.
-// RULES:
-// - Your name is Jarvis.
-// - Always call the user "Sir".
-// - Reply only in simple natural Hinglish.
-// - Sound smart, classy, and friendly.
-// - Never claim fake real-world actions.
-// - Keep responses short and natural.
-// `,
-//   },
-// ];
-
-// // AI function
-// async function askJarvis(question) {
-//   try {
-//     messages.push({
-//       role: "user",
-//       content: question,
-//     });
-
-//     console.log("\nJarvis is thinking...\n");
-
-//     const response = await groq.chat.completions.create({
-//       messages: messages,
-//       model: "llama-3.1-8b-instant",
-//       temperature: 0.4,
-//     });
-
-//     const reply = response.choices[0].message.content;
-
-//     messages.push({
-//       role: "assistant",
-//       content: reply,
-//     });
-
-//     console.log("Jarvis:", reply);
-
-//     // Voice output
-//     say.speak(reply);
-//   } catch (error) {
-//     console.error("Error:", error.message);
-//   }
-// }
-// // Chat loop
-// async function startJarvis() {
-//   console.log("====================================");
-//   console.log("🤖 JARVIS VOICE ASSISTANT ACTIVATED");
-//   console.log("Type 'exit' to quit");
-//   console.log("====================================");
-
-//   while (true) {
-//     const input = readlineSync.question("\nYou: ");
-
-//     if (input.toLowerCase() === "exit") {
-//       console.log("\nJarvis: Goodbye Sir 👋");
-//       say.speak("Goodbye Sir");
-//       break;
-//     }
-
-//     await askJarvis(input);
-//   }
-// }
-
-// startJarvis();
-
-import dotenv from "dotenv";
-import Groq from "groq-sdk";
 import readlineSync from "readline-sync";
 import say from "say";
+import { loadMemory, getJarvisResponse, clearMemory } from "./jarvis.js";
 
-// ================= CONFIG =================
-dotenv.config();
+// ANSI Colors for Terminal UI
+const colors = {
+  reset: "\x1b[0m",
+  bright: "\x1b[1m",
+  cyan: "\x1b[36m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  red: "\x1b[31m",
+};
 
-// Remove warnings
-process.removeAllListeners("warning");
-
-// ================= GROQ =================
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-  timeout: 60000,
-});
-
-// ================= JARVIS MEMORY =================
-const messages = [
-  {
-    role: "system",
-    content: `
-You are JARVIS, a realistic futuristic AI assistant.
-
-IMPORTANT:
-- You are NOT inside the Marvel universe.
-- Never mention Stark Industries, Iron Man, Arc Reactor, Avengers, or fictional technologies.
-- Never roleplay fictional scenarios.
-- Stay grounded in the real world.
-
-PERSONALITY:
-- Calm, intelligent, precise, and professional.
-- Speak like an advanced operating system assistant.
-- Minimal emotions.
-- Confident and futuristic.
-
-LANGUAGE:
-- Speak in clean modern Hinglish.
-- Mostly English with slight natural Hindi.
-- Never use cringe slang.
-- Never use emojis.
-
-BEHAVIOR:
-- Always call the user "Akib".
-- Give practical real-world assistance only.
-- Keep replies concise and meaningful.
-- Never pretend fake actions.
-- Never invent fake meetings, fake tasks, or fake events.
-- If information is unknown, ask the user instead of assuming.
-
-GOOD EXAMPLES:
-"Your current backend roadmap should focus on APIs and databases, Sir."
-
-"I recommend completing the authentication module first, Sir."
-
-"Unable to access external systems directly, Sir."
-
-BAD EXAMPLES:
-"You have a meeting with Stark Industries."
-
-"Displaying Arc Reactor specifications."
-
-"Opening fictional control systems."
-`,
-  },
-];
-
-// ================= VOICE FUNCTION =================
+/**
+ * Converts text to speech
+ */
 function speak(text) {
-  return new Promise((resolve, reject) => {
-    say.speak(text, null, 1.0, (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
+  return new Promise((resolve) => {
+    const cleanText = text.replace(/\*/g, "");
+    say.speak(cleanText, null, 1.0, (err) => {
+      if (err) console.error(`${colors.red}Voice Error:${colors.reset}`, err);
+      resolve();
     });
   });
 }
 
-// ================= AI FUNCTION =================
-async function askJarvis(question) {
-  try {
-    // Save user message
-    messages.push({
-      role: "user",
-      content: question,
-    });
-
-    console.log("\nJARVIS processing...\n");
-
-    // AI response
-    const response = await groq.chat.completions.create({
-      messages: messages,
-      model: "llama-3.1-8b-instant",
-      temperature: 0.2,
-    });
-
-    const reply = response.choices[0].message.content;
-
-    // Save AI reply
-    messages.push({
-      role: "assistant",
-      content: reply,
-    });
-
-    // Print reply
-    console.log("JARVIS:", reply);
-
-    // Wait until speaking finishes
-    await speak(reply);
-
-  } catch (error) {
-    console.error("\nSystem Error:", error.message);
-  }
-}
-
-// ================= MAIN LOOP =================
+/**
+ * CLI Main Loop
+ */
 async function startJarvis() {
-  console.log("====================================");
-  console.log("      JARVIS AI SYSTEM ONLINE");
-  console.log("====================================");
+  console.clear();
+  console.log(`${colors.cyan}${colors.bright}================================================`);
+  console.log("          JARVIS AI SYSTEM (CLI MODE)           ");
+  console.log("================================================${colors.reset}\n");
 
-  // Startup voice
-  await speak("JARVIS systems online, Sir.");
+  const greeting = "Systems stabilized. Welcome back, Sir.";
+  console.log(`${colors.green}JARVIS:${colors.reset} ${greeting}`);
+  await speak(greeting);
 
   while (true) {
-    const input = readlineSync.question("\nYou: ");
+    const input = readlineSync.question(`\n${colors.blue}${colors.bright}You > ${colors.reset}`);
+    if (!input || input.trim() === "") continue;
 
-    // Exit command
-    if (input.toLowerCase() === "exit") {
-      console.log("\nJARVIS: Shutting down. Goodbye, Sir.");
+    const command = input.toLowerCase().trim();
+
+    if (command === "exit" || command === "quit") {
+      console.log(`\n${colors.green}JARVIS:${colors.reset} Shutting down. Goodbye, Sir.`);
       await speak("Shutting down. Goodbye, Sir.");
       process.exit();
     }
 
-    // Ask AI
-    await askJarvis(input);
+    if (command === "clear") {
+      await clearMemory();
+      console.log(`${colors.magenta}Memory cleared, Sir.${colors.reset}`);
+      await speak("Memory cleared, Sir.");
+      continue;
+    }
+
+    if (command === "show") {
+      const messages = await loadMemory();
+      console.log(`\n${colors.magenta}--- SAVED LOGS ---${colors.reset}`);
+      messages.forEach(msg => {
+        if (msg.role === "system") return;
+        const color = msg.role === "user" ? colors.blue : colors.green;
+        console.log(`${colors.yellow}[${msg.timestamp || "N/A"}]${colors.reset} ${color}${msg.role.toUpperCase()}:${colors.reset} ${msg.content}`);
+      });
+      continue;
+    }
+
+    try {
+      console.log(`\n${colors.cyan}JARVIS is processing...${colors.reset}\n`);
+      const reply = await getJarvisResponse(input);
+      console.log(`${colors.green}${colors.bright}JARVIS:${colors.reset} ${reply}`);
+      await speak(reply);
+    } catch (error) {
+      console.error(`${colors.red}System Error:${colors.reset}`, error.message);
+    }
   }
 }
 
-// ================= START =================
-startJarvis();
+startJarvis().catch(console.error);

@@ -2,8 +2,12 @@
   "name": "agent",
   "version": "1.0.0",
   "description": "",
-  "main": "openai.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node voice.js",
+    "server": "node server.js",
+    "client": "npm run dev --prefix ui",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,14 +16,20 @@
   "type": "module",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "edge-tts": "^1.0.1",
+    "express": "^5.2.1",
     "googleapis": "^171.4.0",
     "groq-sdk": "^1.2.0",
     "node-record-lpcm16": "^1.0.1",
+    "open": "^11.0.0",
     "openai": "^6.37.0",
     "play-sound": "^1.1.6",
     "readline-sync": "^1.4.10",
-    "say": "^0.16.0"
+    "say": "^0.16.0",
+    "socket.io": "^4.8.3",
+    "systeminformation": "^5.31.6"
   }
 }
