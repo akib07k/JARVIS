@@ -17,17 +17,41 @@ import {
   Clock,
   Cloud
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export const FuturisticDashboard = () => {
   const { messages, isThinking, isConnected, sendMessage } = useJarvis();
+  const [currentTime, setCurrentTime] = useState(new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isThinking]);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: '2-digit', 
+      year: 'numeric' 
+    }).toUpperCase();
+  };
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#050816] text-slate-100 font-sans overflow-hidden relative">
@@ -128,8 +152,8 @@ export const FuturisticDashboard = () => {
           {/* Top Widget */}
           <div className="p-6 bg-[#00E5FF]/10 border-b border-[#00E5FF]/20 flex items-center justify-between shadow-inner">
             <div className="flex flex-col">
-              <span className="text-3xl font-black tracking-tighter text-[#00F0FF] glow-text-electric">18:18</span>
-              <span className="text-[11px] font-mono text-[#00BFFF] uppercase font-bold">MAY 14, 2026</span>
+              <span className="text-3xl font-black tracking-tighter text-[#00F0FF] glow-text-electric">{formatTime(currentTime)}</span>
+              <span className="text-[11px] font-mono text-[#00BFFF] uppercase font-bold">{formatDate(currentTime)}</span>
             </div>
             <div className="text-right flex flex-col items-end">
               <Cloud className="w-6 h-6 text-[#00E5FF] mb-2 drop-shadow-[0_0_5px_#00E5FF]" />

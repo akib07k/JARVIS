@@ -5,16 +5,6 @@
   },
   {
     "role": "user",
-    "content": "bhai ek script bna schchai pr",
-    "timestamp": "14/5/2026, 9:56:02 pm"
-  },
-  {
-    "role": "assistant",
-    "content": "Sir, I'm not sure I understand what you're asking. Could you please clarify or provide more context about the script you'd like me to create, sir?",
-    "timestamp": "14/5/2026, 9:56:03 pm"
-  },
-  {
-    "role": "user",
     "content": "make a script on honesty",
     "timestamp": "14/5/2026, 9:56:42 pm"
   },
@@ -102,5 +92,15 @@
     "role": "assistant",
     "content": "Akib, it seems you've entered a closing bracket. I'm not sure what you're trying to communicate, sir. Could you please rephrase or provide more context, sir?",
     "timestamp": "14/5/2026, 10:33:57 pm"
+  },
+  {
+    "role": "user",
+    "content": "hlo",
+    "timestamp": "16/5/2026, 3:21:58 pm"
+  },
+  {
+    "role": "assistant",
+    "content": "Akib, it seems you're saying \"hello\" again. I'll acknowledge it this time, sir. Hello, Akib. How can I assist you today, sir?",
+    "timestamp": "16/5/2026, 3:21:59 pm"
   }
 ]
