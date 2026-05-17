@@ -77,23 +77,9 @@ export async function getJarvisResponse(question) {
     const userInput = question.toLowerCase();
 
     // --- 1. HANDLE BASIC SYSTEM COMMANDS (FAST PATH) ---
-    if (userInput.includes("time") || userInput.includes("date") || userInput.includes("system info") || userInput.includes("battery")) {
-      const info = await systemController.getSystemInfo();
-      return info;
-    }
-
-    if (userInput.startsWith("open ")) {
-      const target = userInput.replace("open ", "").trim();
-      if (target.includes(".") || target.includes("www")) {
-        return await systemController.openWebsite(target);
-      } else {
-        return await systemController.openApp(target);
-      }
-    }
-
-    if (userInput.startsWith("search ")) {
-      const query = userInput.replace("search ", "").trim();
-      return await systemController.searchGoogle(query);
+    const directResponse = await systemController.handleDirectCommand(question);
+    if (directResponse !== null) {
+      return directResponse;
     }
 
     // --- 2. REGULAR AI CONVERSATION ---
@@ -112,15 +98,51 @@ export async function getJarvisResponse(question) {
     });
 
     const reply = response.choices[0].message.content;
+    let finalReply = reply;
+
+    // Parse and execute any command tags returned by the AI
+    const openUrlRegex = /\[OPEN_URL:\s*(.+?)\]/i;
+    const openAppRegex = /\[OPEN_APP:\s*(.+?)\]/i;
+    const searchRegex = /\[SEARCH:\s*(.+?)\]/i;
+    const sysInfoRegex = /\[SYS_INFO\]/i;
+
+    const openUrlMatch = finalReply.match(openUrlRegex);
+    const openAppMatch = finalReply.match(openAppRegex);
+    const searchMatch = finalReply.match(searchRegex);
+    const sysInfoMatch = finalReply.match(sysInfoRegex);
+
+    if (openUrlMatch) {
+      const url = openUrlMatch[1].trim();
+      finalReply = finalReply.replace(openUrlRegex, "").trim();
+      await systemController.openWebsite(url);
+    }
+
+    if (openAppMatch) {
+      const appName = openAppMatch[1].trim();
+      finalReply = finalReply.replace(openAppRegex, "").trim();
+      await systemController.openApp(appName);
+    }
+
+    if (searchMatch) {
+      const query = searchMatch[1].trim();
+      finalReply = finalReply.replace(searchRegex, "").trim();
+      await systemController.searchGoogle(query);
+    }
+
+    if (sysInfoMatch) {
+      finalReply = finalReply.replace(sysInfoRegex, "").trim();
+      const sysInfo = await systemController.getSystemInfo();
+      finalReply = `${finalReply}\n\n${sysInfo}`;
+    }
 
     messages.push({
       role: "assistant",
-      content: reply,
+      content: finalReply,
       timestamp: new Date().toLocaleString()
     });
 
     await saveMemory(messages);
-    return reply;
+    return finalReply;
 
   } catch (error) {
     console.error("JARVIS Core Error:", error.message);

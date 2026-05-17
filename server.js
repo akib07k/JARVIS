@@ -40,11 +40,27 @@ function speak(text) {
 io.on("connection", (socket) => {
   console.log(`\n📡 Client connected: ${socket.id}`);
 
+  // Send initial greeting
+  const greeting = "Systems stabilized. Welcome back, Sir.";
+  socket.emit("jarvis_response", { text: greeting });
+  speak(greeting);
+
   // Handle Chat Message
   socket.on("user_message", async (data) => {
     try {
       const { message } = data;
       console.log(`\nUser: ${message}`);
+
+      const command = message.toLowerCase().trim();
+
+      // Handle Clear Command
+      if (command === "clear") {
+        await clearMemory();
+        const response = "Memory cleared, Sir.";
+        await speak(response);
+        socket.emit("jarvis_response", { text: response });
+        return;
+      }
 
       // Emit "thinking" state
       socket.emit("jarvis_thinking", true);

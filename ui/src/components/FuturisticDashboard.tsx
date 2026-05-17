@@ -60,7 +60,7 @@ export const FuturisticDashboard = () => {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <Zap className="w-6 h-6 text-[#00E5FF] animate-pulse drop-shadow-[0_0_8px_#00E5FF]" />
-            <h1 className="text-xl font-black tracking-[0.25em] glow-text-electric uppercase">JARVIS</h1>
+            <h1 className="text-xl font-black tracking-[0.25em] glow-text-electric uppercase">JARVIS AI SYSTEM <span className="text-[#00BFFF]/50 text-xs ml-2 tracking-widest">(HUD INTERFACE)</span></h1>
           </div>
           <div className="h-6 w-[1px] bg-[#00E5FF]/20 mx-2" />
           <div className="flex items-center gap-3 text-[11px] font-mono text-[#00E5FF]/80 uppercase tracking-widest">
